@@ -7,15 +7,15 @@ data:
   app-config.yaml: |
     app:
       title: Example Power Developer Hub
-      baseUrl: https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+      baseUrl: https://backstage-developer-hub-developer-hub.apps.hub.ocp.examplerep.com
 
     backend:
       auth:
         keys:
           - secret: ${BACKEND_SECRET}
-      baseUrl: https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+      baseUrl: https://backstage-developer-hub-developer-hub.apps.hub.ocp.examplerep.com
       cors:
-        origin: https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+        origin: https://backstage-developer-hub-developer-hub.apps.hub.ocp.examplerep.com
 
     auth:
       environment: production

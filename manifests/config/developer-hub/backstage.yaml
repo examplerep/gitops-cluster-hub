@@ -13,6 +13,3 @@ spec:
         - name: developer-hub-secrets
     route:
       enabled: true
-      host: backstage-developer-hub.apps.hub.ocp.examplerep.com
-      tls:
-        termination: edge
