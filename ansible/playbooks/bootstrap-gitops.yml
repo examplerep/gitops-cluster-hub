@@ -75,6 +75,15 @@
       changed_when: false
 
     # =========================================================================
+    # Apply ArgoCD RBAC for External Secrets
+    # =========================================================================
+    - name: Apply ArgoCD RBAC for External Secrets
+      ansible.builtin.command:
+        cmd: oc apply -k {{ manifests_dir }}/config/argocd-rbac
+      register: apply_argocd_rbac
+      changed_when: "'created' in apply_argocd_rbac.stdout or 'configured' in apply_argocd_rbac.stdout"
+
+    # =========================================================================
     # Create ArgoCD Applications
     # =========================================================================
     - name: Apply ArgoCD Applications
