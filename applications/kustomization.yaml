@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - openshift-gitops.yaml #SW0
   - openshift-cert-manager.yaml #SW1
+  - openshift-external-secrets.yaml #SW2

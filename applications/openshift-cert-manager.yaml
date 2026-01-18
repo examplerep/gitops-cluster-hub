@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/examplerep/gitops-cluster-hub.git
     targetRevision: main
-    path: gitops-cluster-hub/openshift-cert-manager
+    path: openshift-cert-manager
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:
@@ -18,5 +18,4 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - ServerSideApply=true
