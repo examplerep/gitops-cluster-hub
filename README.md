@@ -1,155 +1,69 @@
 # GitOps Cluster Hub
 
-GitOps configuration for the Example Power hub cluster.
+Bootstrap and manage OpenShift GitOps (ArgoCD) using an app-of-apps pattern.
 
-## Overview
+## Structure
 
-This repository contains:
-
-- Ansible playbooks for bootstrapping GitOps on the hub cluster
-- ArgoCD Application definitions for cluster configuration
-- Operator subscriptions managed via GitOps
-
-## Operators Managed
-
-| Operator                  | Namespace                  | Source            |
-| ------------------------- | -------------------------- | ----------------- |
-| OpenShift GitOps          | openshift-gitops-operator  | redhat-operators  |
-| OpenShift Pipelines       | openshift-operators        | redhat-operators  |
-| OpenShift Cert Manager    | cert-manager-operator      | redhat-operators  |
-| External Secrets Operator | external-secrets           | community-operators |
-| Red Hat Developer Hub     | rhdh-operator              | redhat-operators  |
+```
+gitops-cluster-hub/
+├── bootstrap-gitops.yml        # Ansible playbook to bootstrap GitOps
+├── app-of-apps.yaml            # Root Application that manages all apps
+├── applications/               # ArgoCD Applications
+│   ├── kustomization.yaml
+│   └── openshift-gitops.yaml   # Application for GitOps operator config
+└── openshift-gitops/           # OpenShift GitOps operator manifests
+    ├── kustomization.yaml
+    ├── namespace.yaml          # sync-wave: 0
+    ├── operatorgroup.yaml      # sync-wave: -2
+    ├── subscription.yaml       # sync-wave: -1
+    └── argocd.yaml             # sync-wave: 0 (custom health checks)
+```
 
 ## Prerequisites
 
-- Access to the hub cluster (`oc login` completed)
-- Python 3.9+
+- OpenShift cluster with cluster-admin access
+- Ansible with `kubernetes.core` collection installed
+- `oc` CLI logged into the cluster
 
-## Setup
+## Bootstrap
 
-```shell
-cd ansible
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+Run the Ansible playbook to install OpenShift GitOps and create the app-of-apps:
+
+```bash
+ansible-playbook bootstrap-gitops.yml
 ```
 
-## Playbooks
+This will:
+1. Create the `openshift-gitops` namespace
+2. Install the OpenShift GitOps operator
+3. Configure the ArgoCD instance with custom health checks
+4. Create the app-of-apps Application to manage all other Applications
 
-### Bootstrap GitOps
+## Adding Applications
 
-Installs OpenShift GitOps operator and creates the ArgoCD Application to manage all operators.
-
-```shell
-# First, login to the hub cluster
-oc login https://api.hub.ocp.examplerep.com:6443 -u kubeadmin -p <password>
-
-# Run the bootstrap playbook
-cd ansible
-source .venv/bin/activate
-ansible-playbook playbooks/bootstrap-gitops.yml
-```
-
-**What it does:**
-
-1. Applies OpenShift GitOps operator manifests
-2. Waits for the operator and ArgoCD instance to be ready
-3. Creates ArgoCD Applications to manage operators and config
-4. Creates AWS credentials secret for External Secrets Operator
-5. Creates Developer Hub secrets
-6. Outputs ArgoCD access credentials
-
-## Directory Structure
-
-```text
-ansible/
-├── ansible.cfg                    # Ansible configuration
-├── inventory/
-│   └── hosts.yml                  # Inventory configuration
-├── playbooks/
-│   └── bootstrap-gitops.yml       # GitOps bootstrap playbook
-└── requirements.txt               # Python dependencies
-manifests/
-├── argocd-apps/
-│   ├── hub-config.yaml            # ArgoCD Application for config
-│   ├── hub-operators.yaml         # ArgoCD Application for operators
-│   └── kustomization.yaml
-├── config/
-│   ├── developer-hub/
-│   │   ├── namespace.yaml              # Developer Hub namespace
-│   │   ├── oauth-client.yaml           # OpenShift OAuth client
-│   │   ├── app-config.yaml             # Backstage app configuration
-│   │   ├── backstage.yaml              # Backstage CR instance
-│   │   └── kustomization.yaml
-│   ├── external-secrets/
-│   │   ├── cluster-secret-store.yaml   # AWS Secrets Manager connection
-│   │   ├── external-secret-foo.yaml    # ClusterExternalSecret for foo
-│   │   └── kustomization.yaml
-│   └── kustomization.yaml
-└── operators/
-    ├── cert-manager/              # Cert Manager operator
-    ├── developer-hub/             # Red Hat Developer Hub operator
-    ├── external-secrets/          # External Secrets operator
-    ├── openshift-gitops/          # OpenShift GitOps operator
-    ├── openshift-pipelines/       # OpenShift Pipelines operator
-    └── kustomization.yaml
-README.md                          # This file
-```
-
-## External Secrets
-
-The `foo` secret from AWS Secrets Manager is available as a ClusterExternalSecret. To use it in a namespace, add the label:
+Add new ArgoCD Applications to `applications/` and update `applications/kustomization.yaml`:
 
 ```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: my-namespace
-  labels:
-    secrets.examplerep.com/foo: "true"
+resources:
+  - openshift-gitops.yaml
+  - my-new-app.yaml
 ```
 
-This will create a secret named `foo` in that namespace with the value from AWS Secrets Manager.
+The app-of-apps will automatically sync and deploy your new Application.
 
-## GitOps Flow
+## Custom Health Checks
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    Bootstrap Playbook                        │
-│                                                             │
-│  1. Apply OpenShift GitOps operator                         │
-│  2. Wait for ArgoCD                                         │
-│  3. Create ArgoCD Applications                              │
-│  4. Create AWS credentials secret                           │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      ArgoCD                                  │
-│                                                             │
-│  hub-operators Application                                  │
-│    └── Syncs manifests/operators/                           │
-│        ├── openshift-gitops                                 │
-│        ├── openshift-pipelines                              │
-│        ├── cert-manager                                     │
-│        ├── external-secrets                                 │
-│        └── developer-hub                                    │
-│                                                             │
-│  hub-config Application                                     │
-│    └── Syncs manifests/config/                              │
-│        ├── external-secrets/                                │
-│        │   ├── ClusterSecretStore (AWS Secrets Manager)     │
-│        │   └── ClusterExternalSecret (foo)                  │
-│        └── developer-hub/                                   │
-│            ├── OAuthClient                                  │
-│            ├── ConfigMap (app-config)                       │
-│            └── Backstage CR                                 │
-└─────────────────────────────────────────────────────────────┘
+Custom health checks are defined in `openshift-gitops/argocd.yaml` under `spec.resourceCustomizations`. Current health checks:
 
-## Developer Hub
+- `operators.coreos.com/Subscription`
+- `operators.coreos.com/InstallPlan`
 
-After bootstrap, Developer Hub is available at:
+To add more, append to the `resourceCustomizations` field:
 
-- **URL:** https://backstage-developer-hub.apps.hub.ocp.examplerep.com
-- **Auth:** OpenShift OAuth (login with your OpenShift credentials)
+```yaml
+your.group.io/YourCRD:
+  health.lua: |
+    hs = {}
+    -- Lua health check logic
+    return hs
 ```

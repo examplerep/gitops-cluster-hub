@@ -1,0 +1,62 @@
+---
+- name: Install OpenShift GitOps Operator
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    manifest_dir: "{{ playbook_dir }}/openshift-gitops"
+    applications_dir: "{{ playbook_dir }}/applications"
+
+  tasks:
+    - name: Apply OpenShift GitOps manifests
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+      loop:
+        - "{{ manifest_dir }}/namespace.yaml"
+        - "{{ manifest_dir }}/operatorgroup.yaml"
+        - "{{ manifest_dir }}/subscription.yaml"
+
+    - name: Wait for OpenShift GitOps Operator to be installed
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: openshift-gitops
+        label_selectors:
+          - "operators.coreos.com/openshift-gitops-operator.openshift-gitops"
+      register: csv_result
+      until:
+        - csv_result.resources | length > 0
+        - csv_result.resources[0].status.phase is defined
+        - csv_result.resources[0].status.phase == "Succeeded"
+      retries: 30
+      delay: 10
+
+    - name: Apply ArgoCD instance with custom health checks
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ manifest_dir }}/argocd.yaml"
+
+    - name: Wait for ArgoCD instance to be ready
+      kubernetes.core.k8s_info:
+        api_version: argoproj.io/v1beta1
+        kind: ArgoCD
+        name: openshift-gitops
+        namespace: openshift-gitops
+      register: argocd_instance
+      until:
+        - argocd_instance.resources | length > 0
+        - argocd_instance.resources[0].status.phase is defined
+        - argocd_instance.resources[0].status.phase == "Available"
+      retries: 30
+      delay: 10
+
+    - name: Apply app-of-apps Application
+      kubernetes.core.k8s:
+        state: present
+        src: "app-of-apps.yaml"
+
+    - name: Display installation status
+      ansible.builtin.debug:
+        msg: "OpenShift GitOps Operator installed and app-of-apps Application created"

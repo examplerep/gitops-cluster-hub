@@ -1,26 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: hub-config
+  name: openshift-gitops
   namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   source:
     repoURL: https://github.com/examplerep/gitops-cluster-hub.git
     targetRevision: main
-    path: manifests/config
+    path: gitops-cluster-hub/openshift-gitops
   destination:
     server: https://kubernetes.default.svc
-  ignoreDifferences:
-    - group: external-secrets.io
-      kind: ClusterExternalSecret
-      jsonPointers:
-        - /spec/externalSecretSpec/data
-        - /spec/namespaceSelector
-    - group: external-secrets.io
-      kind: ClusterSecretStore
-      jsonPointers:
-        - /spec/provider/aws/auth
   syncPolicy:
     automated:
       prune: true
@@ -28,4 +20,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - RespectIgnoreDifferences=true
