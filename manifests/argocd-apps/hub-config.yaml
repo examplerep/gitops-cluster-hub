@@ -11,6 +11,16 @@ spec:
     path: manifests/config
   destination:
     server: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ClusterExternalSecret
+      jsonPointers:
+        - /spec/externalSecretSpec/data
+        - /spec/namespaceSelector
+    - group: external-secrets.io
+      kind: ClusterSecretStore
+      jsonPointers:
+        - /spec/provider/aws/auth
   syncPolicy:
     automated:
       prune: true
@@ -18,3 +28,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
