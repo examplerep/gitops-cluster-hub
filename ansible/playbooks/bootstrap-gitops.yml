@@ -1,0 +1,150 @@
+---
+- name: Bootstrap OpenShift GitOps on Hub Cluster
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    gitops_namespace: openshift-gitops-operator
+    gitops_channel: latest
+    gitops_source: redhat-operators
+
+  pre_tasks:
+    - name: Verify oc is logged in
+      ansible.builtin.command:
+        cmd: oc whoami
+      register: oc_whoami
+      changed_when: false
+      failed_when: oc_whoami.rc != 0
+
+    - name: Display logged in user
+      ansible.builtin.debug:
+        msg: "Logged in as: {{ oc_whoami.stdout }}"
+
+  tasks:
+    # =========================================================================
+    # Install OpenShift GitOps Operator
+    # =========================================================================
+    - name: Create openshift-gitops-operator namespace
+      ansible.builtin.command:
+        cmd: oc create namespace {{ gitops_namespace }}
+      register: create_ns
+      changed_when: create_ns.rc == 0
+      failed_when: create_ns.rc != 0 and 'AlreadyExists' not in create_ns.stderr
+
+    - name: Create OperatorGroup for OpenShift GitOps
+      ansible.builtin.command:
+        cmd: |
+          oc apply -f - <<EOF
+          apiVersion: operators.coreos.com/v1
+          kind: OperatorGroup
+          metadata:
+            name: openshift-gitops-operator
+            namespace: {{ gitops_namespace }}
+          spec: {}
+          EOF
+      register: create_og
+      changed_when: "'created' in create_og.stdout or 'configured' in create_og.stdout"
+
+    - name: Create Subscription for OpenShift GitOps Operator
+      ansible.builtin.command:
+        cmd: |
+          oc apply -f - <<EOF
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: Subscription
+          metadata:
+            name: openshift-gitops-operator
+            namespace: {{ gitops_namespace }}
+          spec:
+            channel: {{ gitops_channel }}
+            installPlanApproval: Automatic
+            name: openshift-gitops-operator
+            source: {{ gitops_source }}
+            sourceNamespace: openshift-marketplace
+          EOF
+      register: create_sub
+      changed_when: "'created' in create_sub.stdout or 'configured' in create_sub.stdout"
+
+    # =========================================================================
+    # Wait for Operator Installation
+    # =========================================================================
+    - name: Wait for OpenShift GitOps Operator to be installed
+      ansible.builtin.command:
+        cmd: >
+          oc get csv -n {{ gitops_namespace }}
+          -o jsonpath='{.items[?(@.spec.displayName=="Red Hat OpenShift GitOps")].status.phase}'
+      register: csv_status
+      until: csv_status.stdout == 'Succeeded'
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Wait for openshift-gitops namespace to be created
+      ansible.builtin.command:
+        cmd: oc get namespace openshift-gitops
+      register: gitops_ns
+      until: gitops_ns.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    # =========================================================================
+    # Wait for ArgoCD Instance
+    # =========================================================================
+    - name: Wait for ArgoCD instance to be ready
+      ansible.builtin.command:
+        cmd: >
+          oc get argocd openshift-gitops -n openshift-gitops
+          -o jsonpath='{.status.phase}'
+      register: argocd_status
+      until: argocd_status.stdout == 'Available'
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Wait for ArgoCD Server deployment to be ready
+      ansible.builtin.command:
+        cmd: >
+          oc rollout status deployment/openshift-gitops-server
+          -n openshift-gitops --timeout=300s
+      register: argocd_server_rollout
+      changed_when: false
+
+    # =========================================================================
+    # Get ArgoCD Access Information
+    # =========================================================================
+    - name: Get ArgoCD route
+      ansible.builtin.command:
+        cmd: oc get route openshift-gitops-server -n openshift-gitops -o jsonpath='{.spec.host}'
+      register: argocd_route
+      changed_when: false
+
+    - name: Get ArgoCD admin password
+      ansible.builtin.command:
+        cmd: oc get secret openshift-gitops-cluster -n openshift-gitops -o jsonpath='{.data.admin\.password}'
+      register: argocd_password_b64
+      changed_when: false
+
+    - name: Decode ArgoCD admin password
+      ansible.builtin.set_fact:
+        argocd_password: "{{ argocd_password_b64.stdout | b64decode }}"
+
+    # =========================================================================
+    # Summary
+    # =========================================================================
+    - name: Display OpenShift GitOps installation summary
+      ansible.builtin.debug:
+        msg:
+          - "=============================================="
+          - "OpenShift GitOps Installed Successfully"
+          - "=============================================="
+          - ""
+          - "ArgoCD Console: https://{{ argocd_route.stdout }}"
+          - ""
+          - "Credentials:"
+          - "  Username: admin"
+          - "  Password: {{ argocd_password }}"
+          - ""
+          - "CLI Login:"
+          - "  argocd login {{ argocd_route.stdout }} --username admin --password '{{ argocd_password }}' --insecure"
+          - ""
+          - "=============================================="
