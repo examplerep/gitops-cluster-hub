@@ -75,13 +75,56 @@
       changed_when: false
 
     # =========================================================================
-    # Create ArgoCD Application for Hub Operators
+    # Create ArgoCD Applications
     # =========================================================================
-    - name: Apply ArgoCD Application for hub operators
+    - name: Apply ArgoCD Applications
       ansible.builtin.command:
         cmd: oc apply -k {{ manifests_dir }}/argocd-apps
       register: apply_argocd_apps
       changed_when: "'created' in apply_argocd_apps.stdout or 'configured' in apply_argocd_apps.stdout"
+
+    # =========================================================================
+    # Create AWS Credentials Secret for External Secrets
+    # =========================================================================
+    - name: Wait for external-secrets namespace
+      ansible.builtin.command:
+        cmd: oc get namespace external-secrets
+      register: es_ns
+      until: es_ns.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Get AWS access key ID
+      ansible.builtin.command:
+        cmd: aws configure get aws_access_key_id
+      register: aws_access_key_id
+      changed_when: false
+
+    - name: Get AWS secret access key
+      ansible.builtin.command:
+        cmd: aws configure get aws_secret_access_key
+      register: aws_secret_access_key
+      changed_when: false
+      no_log: true
+
+    - name: Create AWS credentials secret for External Secrets
+      ansible.builtin.command:
+        cmd: |
+          oc apply -f - <<EOF
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: aws-credentials
+            namespace: external-secrets
+          type: Opaque
+          stringData:
+            access-key-id: "{{ aws_access_key_id.stdout }}"
+            secret-access-key: "{{ aws_secret_access_key.stdout }}"
+          EOF
+      register: create_aws_secret
+      changed_when: "'created' in create_aws_secret.stdout or 'configured' in create_aws_secret.stdout"
+      no_log: true
 
     # =========================================================================
     # Get ArgoCD Access Information

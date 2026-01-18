@@ -54,8 +54,9 @@ ansible-playbook playbooks/bootstrap-gitops.yml
 
 1. Applies OpenShift GitOps operator manifests
 2. Waits for the operator and ArgoCD instance to be ready
-3. Creates ArgoCD Application to manage all hub operators
-4. Outputs ArgoCD access credentials
+3. Creates ArgoCD Applications to manage operators and config
+4. Creates AWS credentials secret for External Secrets Operator
+5. Outputs ArgoCD access credentials
 
 ## Directory Structure
 
@@ -69,7 +70,14 @@ ansible/
 └── requirements.txt               # Python dependencies
 manifests/
 ├── argocd-apps/
+│   ├── hub-config.yaml            # ArgoCD Application for config
 │   ├── hub-operators.yaml         # ArgoCD Application for operators
+│   └── kustomization.yaml
+├── config/
+│   ├── external-secrets/
+│   │   ├── cluster-secret-store.yaml   # AWS Secrets Manager connection
+│   │   ├── external-secret-foo.yaml    # ClusterExternalSecret for foo
+│   │   └── kustomization.yaml
 │   └── kustomization.yaml
 └── operators/
     ├── cert-manager/              # Cert Manager operator
@@ -81,6 +89,21 @@ manifests/
 README.md                          # This file
 ```
 
+## External Secrets
+
+The `foo` secret from AWS Secrets Manager is available as a ClusterExternalSecret. To use it in a namespace, add the label:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-namespace
+  labels:
+    secrets.examplerep.com/foo: "true"
+```
+
+This will create a secret named `foo` in that namespace with the value from AWS Secrets Manager.
+
 ## GitOps Flow
 
 ```text
@@ -89,7 +112,8 @@ README.md                          # This file
 │                                                             │
 │  1. Apply OpenShift GitOps operator                         │
 │  2. Wait for ArgoCD                                         │
-│  3. Create hub-operators Application                        │
+│  3. Create ArgoCD Applications                              │
+│  4. Create AWS credentials secret                           │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -103,5 +127,11 @@ README.md                          # This file
 │        ├── cert-manager                                     │
 │        ├── external-secrets                                 │
 │        └── developer-hub                                    │
+│                                                             │
+│  hub-config Application                                     │
+│    └── Syncs manifests/config/                              │
+│        └── external-secrets/                                │
+│            ├── ClusterSecretStore (AWS Secrets Manager)     │
+│            └── ClusterExternalSecret (foo)                  │
 └─────────────────────────────────────────────────────────────┘
 ```
