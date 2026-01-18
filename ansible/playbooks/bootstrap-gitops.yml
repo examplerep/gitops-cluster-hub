@@ -127,6 +127,40 @@
       no_log: true
 
     # =========================================================================
+    # Create Developer Hub Secrets
+    # =========================================================================
+    - name: Wait for developer-hub namespace
+      ansible.builtin.command:
+        cmd: oc get namespace developer-hub
+      register: dh_ns
+      until: dh_ns.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Generate backend secret
+      ansible.builtin.command:
+        cmd: openssl rand -hex 32
+      register: backend_secret
+      changed_when: false
+
+    - name: Create Developer Hub secrets
+      ansible.builtin.shell:
+        cmd: |
+          oc apply -f - <<EOF
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: developer-hub-secrets
+            namespace: developer-hub
+          type: Opaque
+          stringData:
+            BACKEND_SECRET: "{{ backend_secret.stdout }}"
+          EOF
+      register: create_dh_secret
+      changed_when: "'created' in create_dh_secret.stdout or 'configured' in create_dh_secret.stdout"
+
+    # =========================================================================
     # Get ArgoCD Access Information
     # =========================================================================
     - name: Get ArgoCD route

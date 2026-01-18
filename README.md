@@ -56,7 +56,8 @@ ansible-playbook playbooks/bootstrap-gitops.yml
 2. Waits for the operator and ArgoCD instance to be ready
 3. Creates ArgoCD Applications to manage operators and config
 4. Creates AWS credentials secret for External Secrets Operator
-5. Outputs ArgoCD access credentials
+5. Creates Developer Hub secrets
+6. Outputs ArgoCD access credentials
 
 ## Directory Structure
 
@@ -74,6 +75,12 @@ manifests/
 │   ├── hub-operators.yaml         # ArgoCD Application for operators
 │   └── kustomization.yaml
 ├── config/
+│   ├── developer-hub/
+│   │   ├── namespace.yaml              # Developer Hub namespace
+│   │   ├── oauth-client.yaml           # OpenShift OAuth client
+│   │   ├── app-config.yaml             # Backstage app configuration
+│   │   ├── backstage.yaml              # Backstage CR instance
+│   │   └── kustomization.yaml
 │   ├── external-secrets/
 │   │   ├── cluster-secret-store.yaml   # AWS Secrets Manager connection
 │   │   ├── external-secret-foo.yaml    # ClusterExternalSecret for foo
@@ -130,8 +137,19 @@ This will create a secret named `foo` in that namespace with the value from AWS 
 │                                                             │
 │  hub-config Application                                     │
 │    └── Syncs manifests/config/                              │
-│        └── external-secrets/                                │
-│            ├── ClusterSecretStore (AWS Secrets Manager)     │
-│            └── ClusterExternalSecret (foo)                  │
+│        ├── external-secrets/                                │
+│        │   ├── ClusterSecretStore (AWS Secrets Manager)     │
+│        │   └── ClusterExternalSecret (foo)                  │
+│        └── developer-hub/                                   │
+│            ├── OAuthClient                                  │
+│            ├── ConfigMap (app-config)                       │
+│            └── Backstage CR                                 │
 └─────────────────────────────────────────────────────────────┘
+
+## Developer Hub
+
+After bootstrap, Developer Hub is available at:
+
+- **URL:** https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+- **Auth:** OpenShift OAuth (login with your OpenShift credentials)
 ```

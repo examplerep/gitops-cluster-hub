@@ -1,0 +1,8 @@
+apiVersion: oauth.openshift.io/v1
+kind: OAuthClient
+metadata:
+  name: developer-hub
+grantMethod: auto
+redirectURIs:
+  - https://backstage-developer-hub.apps.hub.ocp.examplerep.com/api/auth/oauth2Proxy/handler/frame
+secret: developer-hub-oauth-secret

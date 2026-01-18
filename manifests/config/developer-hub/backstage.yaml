@@ -1,0 +1,19 @@
+apiVersion: rhdh.redhat.com/v1alpha3
+kind: Backstage
+metadata:
+  name: developer-hub
+  namespace: developer-hub
+spec:
+  application:
+    appConfig:
+      configMaps:
+        - name: developer-hub-app-config
+    extraEnvs:
+      secrets:
+        - name: developer-hub-secrets
+    route:
+      enabled: true
+      host: backstage-developer-hub.apps.hub.ocp.examplerep.com
+      tls:
+        enabled: true
+        termination: edge

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: developer-hub-app-config
+  namespace: developer-hub
+data:
+  app-config.yaml: |
+    app:
+      title: Example Power Developer Hub
+      baseUrl: https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+
+    backend:
+      auth:
+        keys:
+          - secret: ${BACKEND_SECRET}
+      baseUrl: https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+      cors:
+        origin: https://backstage-developer-hub.apps.hub.ocp.examplerep.com
+
+    auth:
+      environment: production
+      providers:
+        oauth2Proxy: {}
+
+    signInPage: oauth2Proxy
+
+    catalog:
+      rules:
+        - allow: [Component, System, API, Resource, Location, Template]
+      locations: []
