@@ -109,7 +109,7 @@
       no_log: true
 
     - name: Create AWS credentials secret for External Secrets
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: |
           oc apply -f - <<EOF
           apiVersion: v1
@@ -119,8 +119,8 @@
             namespace: external-secrets
           type: Opaque
           stringData:
-            access-key-id: "{{ aws_access_key_id.stdout }}"
-            secret-access-key: "{{ aws_secret_access_key.stdout }}"
+            aws-access-key-id: "{{ aws_access_key_id.stdout }}"
+            aws-secret-access-key: "{{ aws_secret_access_key.stdout }}"
           EOF
       register: create_aws_secret
       changed_when: "'created' in create_aws_secret.stdout or 'configured' in create_aws_secret.stdout"
