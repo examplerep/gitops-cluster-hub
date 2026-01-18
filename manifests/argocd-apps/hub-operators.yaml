@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hub-operators
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/examplerep/gitops-cluster-hub.git
+    targetRevision: main
+    path: manifests/operators
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

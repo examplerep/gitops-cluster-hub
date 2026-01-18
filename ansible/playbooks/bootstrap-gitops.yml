@@ -5,8 +5,7 @@
 
   vars:
     gitops_namespace: openshift-gitops-operator
-    gitops_channel: latest
-    gitops_source: redhat-operators
+    manifests_dir: "{{ playbook_dir }}/../../manifests"
 
   pre_tasks:
     - name: Verify oc is logged in
@@ -24,45 +23,11 @@
     # =========================================================================
     # Install OpenShift GitOps Operator
     # =========================================================================
-    - name: Create openshift-gitops-operator namespace
+    - name: Apply OpenShift GitOps operator manifests
       ansible.builtin.command:
-        cmd: oc create namespace {{ gitops_namespace }}
-      register: create_ns
-      changed_when: create_ns.rc == 0
-      failed_when: create_ns.rc != 0 and 'AlreadyExists' not in create_ns.stderr
-
-    - name: Create OperatorGroup for OpenShift GitOps
-      ansible.builtin.command:
-        cmd: |
-          oc apply -f - <<EOF
-          apiVersion: operators.coreos.com/v1
-          kind: OperatorGroup
-          metadata:
-            name: openshift-gitops-operator
-            namespace: {{ gitops_namespace }}
-          spec: {}
-          EOF
-      register: create_og
-      changed_when: "'created' in create_og.stdout or 'configured' in create_og.stdout"
-
-    - name: Create Subscription for OpenShift GitOps Operator
-      ansible.builtin.command:
-        cmd: |
-          oc apply -f - <<EOF
-          apiVersion: operators.coreos.com/v1alpha1
-          kind: Subscription
-          metadata:
-            name: openshift-gitops-operator
-            namespace: {{ gitops_namespace }}
-          spec:
-            channel: {{ gitops_channel }}
-            installPlanApproval: Automatic
-            name: openshift-gitops-operator
-            source: {{ gitops_source }}
-            sourceNamespace: openshift-marketplace
-          EOF
-      register: create_sub
-      changed_when: "'created' in create_sub.stdout or 'configured' in create_sub.stdout"
+        cmd: oc apply -k {{ manifests_dir }}/operators/openshift-gitops
+      register: apply_gitops
+      changed_when: "'created' in apply_gitops.stdout or 'configured' in apply_gitops.stdout"
 
     # =========================================================================
     # Wait for Operator Installation
@@ -110,6 +75,15 @@
       changed_when: false
 
     # =========================================================================
+    # Create ArgoCD Application for Hub Operators
+    # =========================================================================
+    - name: Apply ArgoCD Application for hub operators
+      ansible.builtin.command:
+        cmd: oc apply -k {{ manifests_dir }}/argocd-apps
+      register: apply_argocd_apps
+      changed_when: "'created' in apply_argocd_apps.stdout or 'configured' in apply_argocd_apps.stdout"
+
+    # =========================================================================
     # Get ArgoCD Access Information
     # =========================================================================
     - name: Get ArgoCD route
@@ -135,7 +109,7 @@
       ansible.builtin.debug:
         msg:
           - "=============================================="
-          - "OpenShift GitOps Installed Successfully"
+          - "OpenShift GitOps Bootstrapped Successfully"
           - "=============================================="
           - ""
           - "ArgoCD Console: https://{{ argocd_route.stdout }}"
@@ -146,5 +120,12 @@
           - ""
           - "CLI Login:"
           - "  argocd login {{ argocd_route.stdout }} --username admin --password '{{ argocd_password }}' --insecure"
+          - ""
+          - "Operators being installed via GitOps:"
+          - "  - OpenShift GitOps"
+          - "  - OpenShift Pipelines"
+          - "  - OpenShift Cert Manager"
+          - "  - External Secrets Operator"
+          - "  - Red Hat Developer Hub"
           - ""
           - "=============================================="
