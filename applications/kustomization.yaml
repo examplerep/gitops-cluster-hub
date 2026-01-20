@@ -5,3 +5,4 @@ resources:
   - openshift-gitops.yaml #SW0
   - openshift-cert-manager.yaml #SW1
   - openshift-external-secrets.yaml #SW2
+  - open-cluster-management.yaml #SW3
