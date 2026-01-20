@@ -25,7 +25,8 @@ gitops-cluster-hub/
     ├── namespace.yaml
     ├── operator-group.yaml
     ├── subscription.yaml
-    └── cluster-secret-store.yaml
+    ├── cluster-secret-store.yaml
+    └── external-secret-test.yaml
 ```
 
 ## Prerequisites
@@ -93,6 +94,24 @@ oc apply -f app-of-apps.yaml
 ```
 
 The app-of-apps will automatically sync and deploy all applications defined in the `applications/` directory.
+
+## Validating External Secrets
+
+A test ExternalSecret is included to validate the ClusterSecretStore configuration. First, create a test secret in AWS Secrets Manager:
+
+```bash
+aws secretsmanager create-secret \
+  --name foo \
+  --secret-string "bar"
+```
+
+After the app-of-apps syncs, verify the secret was created in Kubernetes:
+
+```bash
+oc get secret test-secret -n openshift-external-secrets -o jsonpath='{.data.foo}' | base64 -d
+```
+
+This should return `bar`.
 
 ## Using External Secrets
 
