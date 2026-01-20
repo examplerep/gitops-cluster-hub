@@ -2,10 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - project-cluster.yaml #SW-1
-  - openshift-gitops.yaml #SW0
-  - openshift-cert-manager.yaml #SW1
+  - project-cluster.yaml #SW0
+  - openshift-gitops.yaml #SW1
   - openshift-external-secrets.yaml #SW2
-  - open-cluster-management.yaml #SW3
-  - rhacs-operator.yaml #SW4
-  - openshift-pipelines.yaml #SW5

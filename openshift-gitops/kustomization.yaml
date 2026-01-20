@@ -2,8 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - namespace.yaml
-  - operatorgroup.yaml
-  - subscription.yaml
-  - argocd.yaml
-  - cluster-admin-rbac.yaml
+  - namespace.yaml #SW0
+  - operator-group.yaml #SW1
+  - cluster-admin-rbac.yaml #SW1
+  - subscription.yaml #SW2
+  - argocd.yaml #SW3
