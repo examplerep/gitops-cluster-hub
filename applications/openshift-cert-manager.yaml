@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: default
+  project: cluster
   source:
     repoURL: https://github.com/examplerep/gitops-cluster-hub.git
     targetRevision: main
