@@ -6,35 +6,33 @@ Bootstrap and manage OpenShift GitOps (ArgoCD) using an app-of-apps pattern.
 
 ```
 gitops-cluster-hub/
-├── install-openshift-gitops.sh # Bash script to bootstrap GitOps
-├── app-of-apps.yaml            # Root Application that manages all apps
-├── applications/               # ArgoCD Applications
+├── install-openshift-gitops.sh   # Bash script to bootstrap GitOps
+├── app-of-apps.yaml              # Root Application that manages all apps
+├── applications/                 # ArgoCD Applications
 │   ├── kustomization.yaml
+│   ├── project-cluster.yaml
 │   ├── openshift-gitops.yaml
-│   ├── openshift-cert-manager.yaml
 │   └── openshift-external-secrets.yaml
-├── openshift-gitops/           # OpenShift GitOps operator manifests
+├── openshift-gitops/             # OpenShift GitOps operator manifests
 │   ├── kustomization.yaml
 │   ├── namespace.yaml
-│   ├── operatorgroup.yaml
+│   ├── operator-group.yaml
+│   ├── cluster-admin-rbac.yaml
 │   ├── subscription.yaml
 │   └── argocd.yaml
-├── openshift-cert-manager/     # Cert Manager operator manifests
-│   ├── kustomization.yaml
-│   ├── namespace.yaml
-│   ├── operatorgroup.yaml
-│   └── subscription.yaml
-└── openshift-external-secrets/ # External Secrets operator manifests
+└── openshift-external-secrets/   # External Secrets operator manifests
     ├── kustomization.yaml
     ├── namespace.yaml
-    ├── operatorgroup.yaml
-    └── subscription.yaml
+    ├── operator-group.yaml
+    ├── subscription.yaml
+    └── cluster-secret-store.yaml
 ```
 
 ## Prerequisites
 
 - OpenShift cluster with cluster-admin access
 - `oc` CLI installed and logged into the cluster
+- AWS credentials with access to Secrets Manager (for External Secrets)
 
 ## Bootstrap
 
@@ -54,9 +52,41 @@ This will:
 5. Wait for the ArgoCD instance to be available
 6. Display the ArgoCD URL
 
-### Step 2: Deploy the App-of-Apps
+### Step 2: Create AWS Secrets Manager Credentials
 
-Once OpenShift GitOps is running, deploy the app-of-apps to manage all applications:
+Before deploying the app-of-apps, create the AWS credentials secret for External Secrets:
+
+```bash
+oc create namespace openshift-external-secrets
+
+oc create secret generic aws-secrets-manager-credentials \
+  -n openshift-external-secrets \
+  --from-literal=access-key-id=$(aws configure get aws_access_key_id) \
+  --from-literal=secret-access-key=$(aws configure get aws_secret_access_key)
+```
+
+The AWS IAM user/role needs the following permissions:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecrets"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+### Step 3: Deploy the App-of-Apps
+
+Once OpenShift GitOps is running and the AWS credentials are in place, deploy the app-of-apps:
 
 ```bash
 oc apply -f app-of-apps.yaml
@@ -64,14 +94,94 @@ oc apply -f app-of-apps.yaml
 
 The app-of-apps will automatically sync and deploy all applications defined in the `applications/` directory.
 
+## Using External Secrets
+
+### Creating Secrets in AWS Secrets Manager
+
+Create a simple string secret:
+
+```bash
+aws secretsmanager create-secret \
+  --name my-secret \
+  --secret-string "my-secret-value"
+```
+
+Update an existing secret:
+
+```bash
+aws secretsmanager put-secret-value \
+  --secret-id my-secret \
+  --secret-string "my-new-secret-value"
+```
+
+Create a JSON secret with multiple key/value pairs:
+
+```bash
+aws secretsmanager create-secret \
+  --name my-app-secrets \
+  --secret-string '{"username":"admin","password":"s3cr3t"}'
+```
+
+### Syncing Secrets to Kubernetes
+
+Once the External Secrets operator and ClusterSecretStore are deployed, create ExternalSecret resources to sync secrets from AWS Secrets Manager.
+
+**Example 1: Simple string secret**
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: my-secret
+  namespace: my-namespace
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  target:
+    name: my-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: my-secret
+```
+
+**Example 2: JSON secret with specific keys**
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: my-app-secrets
+  namespace: my-namespace
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  target:
+    name: my-app-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: username
+      remoteRef:
+        key: my-app-secrets
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: my-app-secrets
+        property: password
+```
+
 ## Adding Applications
 
 Add new ArgoCD Applications to `applications/` and update `applications/kustomization.yaml`:
 
 ```yaml
 resources:
+  - project-cluster.yaml
   - openshift-gitops.yaml
-  - openshift-cert-manager.yaml
   - openshift-external-secrets.yaml
   - my-new-app.yaml
 ```
