@@ -6,3 +6,4 @@ resources:
   - operatorgroup.yaml
   - subscription.yaml
   - argocd.yaml
+  - cluster-admin-rbac.yaml
