@@ -6,3 +6,7 @@ resources:
   - openshift-gitops.yaml #SW1
   - openshift-external-secrets.yaml #SW2
   - open-cluster-management.yaml #SW3
+  - openshift-service-mesh.yaml #SW4
+  - openshift-pipelines.yaml #SW5
+  - openshift-cert-manager.yaml #SW6
+  - redhat-quay.yaml #SW7
