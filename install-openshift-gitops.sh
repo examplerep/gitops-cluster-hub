@@ -44,7 +44,7 @@ apply_manifests() {
 
     # Apply manifests in order respecting sync-waves
     oc apply -f "$SCRIPT_DIR/openshift-gitops/namespace.yaml"
-    oc apply -f "$SCRIPT_DIR/openshift-gitops/operatorgroup.yaml"
+    oc apply -f "$SCRIPT_DIR/openshift-gitops/operator-group.yaml"
     oc apply -f "$SCRIPT_DIR/openshift-gitops/subscription.yaml"
 }
 
