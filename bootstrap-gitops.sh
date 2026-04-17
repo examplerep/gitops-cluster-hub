@@ -59,3 +59,8 @@ while true; do
 done
 
 log "Cluster Argo CD instance is ready"
+
+log "Applying app-of-apps (cluster-gitops-hub Application)"
+oc apply -f applications/app-of-apps.yaml
+
+log "Bootstrap finished"
