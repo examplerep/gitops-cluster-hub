@@ -8,3 +8,4 @@ resources:
   - openshift-gitops-cluster.yaml
   - openshift-pipelines-operator.yaml
   - openshift-cert-manager-operator.yaml
+  - advanced-cluster-management.yaml

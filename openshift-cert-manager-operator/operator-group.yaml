@@ -6,4 +6,4 @@ metadata:
   name: openshift-cert-manager-operator
 spec:
   upgradeStrategy: Default
-  targetNamespaces: []
+  targetNamespaces: ["cert-manager-operator"]

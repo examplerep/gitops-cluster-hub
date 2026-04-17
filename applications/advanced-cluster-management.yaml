@@ -1,0 +1,24 @@
+# Red Hat Advanced Cluster Management hub (one per cluster). Requires cluster-admin–class permissions.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: advanced-cluster-management
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/examplerep/gitops-cluster-hub.git
+    targetRevision: main
+    path: advanced-cluster-management
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: open-cluster-management
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

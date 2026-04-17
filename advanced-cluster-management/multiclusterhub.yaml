@@ -1,0 +1,8 @@
+# Creates the hub after the operator CSV is ready; status Running can take several minutes.
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: multiclusterhub
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec: {}

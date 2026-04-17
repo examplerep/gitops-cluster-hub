@@ -1,0 +1,10 @@
+# One OperatorGroup per namespace; hub runs in this namespace only.
+# https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/latest/html/install/index
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: open-cluster-management
+spec:
+  upgradeStrategy: Default
+  targetNamespaces:
+    - open-cluster-management
