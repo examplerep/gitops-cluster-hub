@@ -6,3 +6,4 @@ namespace: openshift-gitops-cluster
 resources:
   - openshift-gitops-operator.yaml
   - openshift-gitops-cluster.yaml
+  - openshift-pipelines-operator.yaml
