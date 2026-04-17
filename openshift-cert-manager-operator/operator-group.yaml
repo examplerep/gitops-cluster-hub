@@ -1,0 +1,9 @@
+# AllNamespaces install mode (recommended for cert-manager Operator v1.15+).
+# https://docs.openshift.com/container-platform/latest/security/cert_manager_operator/cert-manager-operator-install.html
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-cert-manager-operator
+spec:
+  upgradeStrategy: Default
+  targetNamespaces: []

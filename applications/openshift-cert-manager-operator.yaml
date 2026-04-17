@@ -1,0 +1,24 @@
+# cert-manager Operator for Red Hat OpenShift (operator here; workloads in cert-manager namespace).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openshift-cert-manager-operator
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/examplerep/gitops-cluster-hub.git
+    targetRevision: main
+    path: openshift-cert-manager-operator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager-operator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
