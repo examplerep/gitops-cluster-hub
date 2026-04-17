@@ -1,22 +1,22 @@
-# Syncs the OpenShift GitOps operator Subscription (install once per cluster).
-# Set spec.source.repoURL and targetRevision to your Git remote and default branch.
+# Bootstrap: apply once after cluster-argocd is running (not listed in applications/kustomization.yaml).
+#   oc apply -f applications/app-of-apps.yaml
+# Then Argo CD syncs the applications/ kustomization and creates the child Applications.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: openshift-gitops-operator
+  name: cluster-gitops-hub
+  namespace: openshift-gitops-cluster
   finalizers:
     - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   source:
     repoURL: https://github.com/examplerep/gitops-cluster-hub.git
     targetRevision: main
-    path: openshift-gitops-operator
+    path: applications
   destination:
     server: https://kubernetes.default.svc
-    namespace: openshift-gitops-operator
+    namespace: openshift-gitops-cluster
   syncPolicy:
     automated:
       prune: true

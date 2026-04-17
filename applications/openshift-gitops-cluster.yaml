@@ -1,0 +1,23 @@
+# Hub Argo CD instance (cluster-argocd) and operator-managed Route. Depends on the GitOps operator.
+# Set spec.source.repoURL and targetRevision to your Git remote and default branch.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openshift-gitops-cluster
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/examplerep/gitops-cluster-hub.git
+    targetRevision: main
+    path: openshift-gitops-cluster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops-cluster
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
