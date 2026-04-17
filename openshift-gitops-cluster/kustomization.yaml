@@ -6,4 +6,3 @@ namespace: openshift-gitops-cluster
 resources:
   - namespace.yaml
   - argocd.yaml
-  - route.yaml

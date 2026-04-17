@@ -3,6 +3,18 @@ kind: ArgoCD
 metadata:
   name: cluster-argocd
 spec:
+  # Dex + OpenShift OAuth: https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/latest/html/access_control_and_user_management/configuring-sso-for-argo-cd-using-dex
+  # Map OpenShift groups to Argo CD roles: https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/latest/html/access_control_and_user_management/configuring-argo-cd-rbac
+  rbac:
+    policy: 'g, rbacsystem:cluster-admins, role:admin'
+    scopes: '[groups]'
   server:
     route:
-      enabled: false
+      enabled: true
+      tls:
+        termination: reencrypt
+        insecureEdgeTerminationPolicy: Redirect
+  sso:
+    provider: dex
+    dex:
+      openShiftOAuth: true
