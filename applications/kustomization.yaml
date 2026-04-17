@@ -1,0 +1,3 @@
+resources:
+  - openshift-gitops-operator.yaml
+  - openshift-gitops-cluster.yaml
